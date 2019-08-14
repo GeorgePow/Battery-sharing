@@ -1,91 +1,88 @@
+// management program
 
-
-const int relePin1 = 13; //реле отключения потребителя от аккумулятора для питания от шины обмена
-const int relePin2 = 12; //реле включения на питания потребителя от системы.
-const int relePin3 = 11; //реле включения включения аккумулятора на разаряд на общую шину
-const int relePin4 = 10; //реле включения аккумулятора на заряд с шины иммитации
-const int buttonPin1 = 2; // кнопка управления режимом "zarad"
-const int buttonPin2 = 3; // кнопка управления режимом "send"
-const int buttonPin3 = 4; // кнопка управления режимом "recieve"
-
+const int relePin1 = 13;  // пин 13 - реле отключения потребителя от аккумулятора для питания от шины обмена
+const int relePin2 = 12;  // пин 12 - реле включения на питание потребителя от системы.
+const int relePin3 = 11;  // пин 11 - реле включения аккумулятора на разряд на общую шину
+const int relePin4 = 10;  // пин 10 - реле включения аккумулятора на заряд с шины иммитации
+const int buttonPin1 = 2;  // пин 2 - кнопка управления режимом "charge"
+const int buttonPin2 = 3;  // пин 3 - кнопка управления режимом "send"
+const int buttonPin3 = 4;  // пин 4 - кнопка управления режимом "recieve"
 
 
 void setup()
 {
-    pinMode(relePin1, OUTPUT);      // устанавливаем вывод на реле 1
-    pinMode(relePin2, OUTPUT);      // устанавливаем вывод на реле 2
-    pinMode(relePin3, OUTPUT);      // устанавливаем вывод на реле 3
-    pinMode(relePin4, OUTPUT);      // устанавливаем вывод на реле 4
+  pinMode(relePin1, OUTPUT);  // устанавливаем вывод на реле 1
+  pinMode(relePin2, OUTPUT);  // устанавливаем вывод на реле 2
+  pinMode(relePin3, OUTPUT);  // устанавливаем вывод на реле 3
+  pinMode(relePin4, OUTPUT);  // устанавливаем вывод на реле 4
 
-    pinMode(buttonPin1, INPUT);      // устанавливаем режим входа для кнопки 1
-    pinMode(buttonPin2, INPUT);      // устанавливаем режим входа для кнопки 2
-    pinMode(buttonPin3, INPUT);      // устанавливаем режим входа для кнопки 3
- 
+  pinMode(buttonPin1, INPUT);  // устанавливаем режим входа для кнопки 1
+  pinMode(buttonPin2, INPUT);  // устанавливаем режим входа для кнопки 2
+  pinMode(buttonPin3, INPUT);  // устанавливаем режим входа для кнопки 3
 }
+
 
 void loop()
 {
-  int buttonPin1_status = digitalRead(buttonPin1); //переменная для запоминания состояния кнопки
-  int buttonPin2_status = digitalRead(buttonPin2); //переменная для запоминания состояния кнопки
-  int buttonPin3_status = digitalRead(buttonPin3); //переменная для запоминания состояния кнопки
+  int buttonPin1_status = digitalRead(buttonPin1);  // переменная для запоминания состояния кнопки
+  int buttonPin2_status = digitalRead(buttonPin2);  // переменная для запоминания состояния кнопки
+  int buttonPin3_status = digitalRead(buttonPin3);  // переменная для запоминания состояния кнопки
 
 
-  if (buttonPin1_status == HIGH) // работы функции от 1 кнопки иначе переходим на функцию начальный режим
+  if (buttonPin1_status == HIGH)  // работы функции от 1 кнопки иначе переходим на функцию начальный режим
   {
     function_charge ();
   }
   else
-  function_initialmode ();
-  
-
-  if (buttonPin2_status == HIGH) // работы функции от 2 кнопки иначе переходим на функцию начальный режим
   {
-    function_send;
+    if (buttonPin2_status == HIGH)  // работы функции от 2 кнопки иначе переходим на функцию начальный режим
+    {
+      function_send ();
+    }
+    else
+    {
+      if (buttonPin3_status == HIGH)  // работы функции от 3 кнопки иначе переходим на функцию начальный режим
+      {
+      function_recieve ();
+      }
+      else
+        function_initialmode ();
+    }
   }
-  else
-  function_initialmode ();
-  
-
-  if (buttonPin3_status == HIGH) // работы функции от 3 кнопки иначе переходим на функцию начальный режим
-  {
-    function_recieve;
-  }
-  else
-  function_initialmode ();
-
-  
-  }
- 
+} 
 
 
-void function_charge () //функция отвечает за режим 1 это когда батарея ставится на заряд при этом идет подача энергии потребителю.
-   {
-     digitalWrite (relePin1,HIGH);//замыкаем 1 реле выдаем с акб на потребителя
-     digitalWrite (relePin2,LOW);//вырубаем 2 реле и не принимаем с общий шины
-     digitalWrite (relePin3,LOW);//вырубаем 3 реле и не отдаем в общую шину
-     digitalWrite (relePin4,HIGH);//включаем реле 4 и начинаем потреблять от шины иммитации
+void function_charge ()  // функция отвечает за режим 1 это когда батарея ставится на заряд при этом идет подача энергии потребителю.
+{
+  digitalWrite (relePin1, HIGH);  // замыкаем реле 1 и выдаем с акб на потребителя
+  digitalWrite (relePin2, LOW);  // размыкаем реле 2 и не принимаем с общей шины
+  digitalWrite (relePin3, LOW);  // размыкаем реле 3 и не отдаем в общую шину
+  digitalWrite (relePin4, HIGH);  // замыкаем реле 4 и начинаем потреблять от шины имитации
 }
 
-void function_send () //функция отвечает за режим отправки энергии из аккумулятора в общую шину при этом потребитель остается включеным.
+
+void function_send ()  // функция отвечает за режим отправки энергии из аккумулятора в общую шину при этом потребитель остается включеным.
 {
-  digitalWrite (relePin1,HIGH);//замыкаем 1 реле выдаем с акб на потребителя
-  digitalWrite (relePin2,LOW);//вырубаем 2 реле и не принимаем с общий шины
-  digitalWrite (relePin3,HIGH);//включаем 3 реле и не отдаем в общую шину
-  digitalWrite (relePin4,HIGH);//включаем реле 4 и начинаем потреблять от шины иммитации
+  digitalWrite (relePin1, HIGH);  // замыкаем реле 1 и выдаем с акб на потребителя
+  digitalWrite (relePin2, LOW);  // размыкаем реле 2 и не принимаем с общий шины
+  digitalWrite (relePin3, HIGH);  // замыкаем реле 3 и не отдаем в общую шину
+  digitalWrite (relePin4, HIGH);  // замыкаем реле 4 и начинаем потреблять от шины иммитации
 }
 
-void function_recieve () //функция отвечает за режим получения энергии от общей шиныпри этом аккумулятор отключаем.
+
+void function_recieve ()  // функция отвечает за режим получения энергии от общей шиныпри этом аккумулятор отключаем.
 {
-  digitalWrite (relePin1,LOW);//отключаем 1 реле и убираем из схемы аккумуляторную батарею
-  digitalWrite (relePin2,HIGH);//включаем 2 реле и  принимаем с общий шины
-  digitalWrite (relePin3,HIGH);//включаем 3 реле и не отдаем в общую шину
-  digitalWrite (relePin4,LOW);//выключаем реле 4 и начинаем потреблять от шины иммитации
+  digitalWrite (relePin1, LOW);  // размыкаем реле 1 и убираем из схемы аккумуляторную батарею
+  digitalWrite (relePin2, HIGH);  // замыкаем реле 2 и принимаем с общий шины
+  digitalWrite (relePin3, HIGH);  // замыкаем реле 3 и не отдаем в общую шину
+  digitalWrite (relePin4, LOW);  // размыкаем реле 4 и начинаем потреблять от шины иммитации
 }
 
-void function_initialmode () //функция отрабатывает когда не один из режимов не запущен при этом питаемся от аккумулятора и остальное отбрасываем
+
+void function_initialmode ()  // функция отрабатывает, когда не один из режимов не запущен, при этом питаемся от аккумулятора и остальное отбрасываем
 {
-     digitalWrite (relePin1,HIGH);//замыкаем 1 реле выдаем с акб на потребителя
-     digitalWrite (relePin2,LOW);//отключаем 2 реле и не принимаем с общий шины
-     digitalWrite (relePin3,LOW);//отключаем 3 реле и не отдаем в общую шину
-     digitalWrite (relePin4,LOW);// отключаем реле 4 и начинаем потреблять от шины иммитации
+  digitalWrite (relePin1, HIGH);  // замыкаем реле 1 и выдаем с акб на потребителя
+  digitalWrite (relePin2, LOW);  // размыкаем реле 2 и не принимаем с общий шины
+  digitalWrite (relePin3, LOW);  // размыкаем реле 3 и не отдаем в общую шину
+  digitalWrite (relePin4, LOW);  // размыкаем реле 4 и начинаем потреблять от шины иммитации
 }
