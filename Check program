@@ -1,0 +1,35 @@
+// check program
+
+const int relePin1 = 13;  // пин 13 - реле 1
+const int relePin2 = 12;  // пин 12 - реле 2
+const int leePin1 = 2;  // пин 2 - светодиод 1
+const int ledPin2 = 3;  // пин 3 - светодиод 2
+
+
+void setup()
+{
+  pinMode(relePin1, OUTPUT);  // устанавливаем вывод на реле 1
+  pinMode(relePin2, OUTPUT);  // устанавливаем вывод на реле 2
+
+  pinMode(ledPin1, INPUT);  // устанавливаем режим входа для светодиода 1
+  pinMode(ledPin2, INPUT);  // устанавливаем режим входа для светодиода 2
+}
+
+
+void loop()
+{
+  activate_relay ();
+
+}
+
+
+void activate_relay ()  // функция включает реле
+{
+  digitalWrite (relePin1, HIGH);  // замыкаем реле 1
+}
+
+
+void activate_led ()  // функция включает светодиод 1
+{
+  digitalWrite (ledPin1, HIGH);  // замыкаем светодиод 1
+}
