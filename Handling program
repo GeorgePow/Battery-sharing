@@ -1,46 +1,55 @@
+from random import normalvariate, choice, random
+from math import log
+
+
 class Photovoltaic:
 	'''Класс показывает состояние солнечных панелей/источников энергии'''
-	def __init__(self, num):
-		self.numofcol = num
-		self.production = None
-	
+	func = normalvariate(0, 0.15)
+
+	def __init__(self, power):
+		self.power = power
+		self.prod = round(self.set_production(), 6)
+
 	# функция возвращает доступную мощность	
-	def get_production(self, moment):
-		pass
-	
+	def get_production(self):
+		return self.prod
+
 	# функция передачи доступной мощности	
 	def transfer_energy(self, load):
-		pass
-		
+		self.prod = load.receive_energy(self.prod)
+
 	# функция объявления выработки энергии на данный час
-	def set_production(self, hour):
-		pass
-		
+	def set_production(self):
+		return create_capacity(self, self.power, Photovoltaic.func)
+
 
 class Load:
 	'''Класс показывает состояние потребителя'''
-	def __init__(self, num):
-		self.numofcol = num
-		self.cons = None
+	func = (-0.5 * log(random())) ** 1.5
+
+	def __init__(self, load):
+		self.load = load
+		self.cons = round(self.set_consumption(), 6)
 		self.needer = True
 		self.prod = []
-	
+
 	# функция объявления нагрузки на данный час
-	def set_consumption(self, hour):
-		pass
+	def set_consumption(self):
+		return create_capacity(self, self.load, Load.func)
 
 	# функция возвращает требуемую мощность
-	def get_consumption(self, moment):
-		pass
-		
+	def get_consumption(self):
+		return self.cons
+
 	# функция получения требуемой мощности
 	def receive_energy(self, energy):
-		pass
-	
+		self.cons -= energy
+		energy = -self.cons if self.cons <= 0
+
 	# функция добавления источника энергии	
 	def add_productor(self, productor):
-		self.prod.add(productor)
-		
+		self.prod.append(productor)
+
 
 class Storage:
 	'''Класс показывает состояние аккумулятора'''
@@ -48,104 +57,112 @@ class Storage:
 		self.numofcol = num
 		self.isfull = None
 		self.prod = []
-	
+
 	# функция получения требуемой мощности	
 	def receive_energy(self, energy):
 		pass
-	
+
 	# функция передачи доступной мощности
 	def transfer_energy(self, energy):
 		pass
-	
+
 	# функция добавления источника энергии
 	def add_productor(self, productor):
-		self.prod.add(productor)
+		self.prod.append(productor)
 
 
 # функция передачи вырабатываемой мощности на нагрузку
-def pv_to_load(pv, load, moment):
+def pv_to_load(pv, load):
 	pass
+
+
+def create_capacity(pv, power, func):
+	generation = [func for _ in range(7)]
+	for i in range(workhours):
+		generation += [func]
+		generation[i] = sum(generation[i:i + 8]) / 8
+		return (sum(generation[:-7]) + 15.184) * power
 
 
 # главная функция
 def main():
-	houses = dict((i, (Photovoltaic(i), Load(i), Storage(i))) for i in range(NOH))  # объявление хозяйств
+	houses = dict((i, (Photovoltaic(choice(power)), Load(i), Storage(i))) for i in range(NOH))  # объявление хозяйств
 
-	for hour in range(workhours):  # работа в течении 24 часов
+	for hour in range(1):  # работа в течении указанного времени
 		for nh in range(NOH):  # задаём значения на данный час:
-			houses[nh][0].set_production(hour)  # производства энергии
-			houses[nh][1].set_consumption(hour)  # потребляемой нагрузки
+			houses[nh][0].set_production()  # производства энергии
+			houses[nh][1].set_consumption()  # потребляемой нагрузки
 
 		# цикл распределения мощности
 		for i in range(NOH):
 			pv, load, storage = houses[i]  # компоненты рассматриваемого дома
 			# значения производимой энергии и потребления для рассматриваемого дома
-			currentpv, currentload = pv.get_production(hour), load.get_consumption(hour)
-			
+			currentpv, currentload = pv.get_production(), load.get_consumption()
+
 			# если производство превышает потребление
 			if currentpv >= currentload:
-				
+
 				# обеспечиваем нашу нагрузку производимой энергией
-				pv_to_load(currentpv, currentload, hour)
-				
+				pv_to_load(currentpv, currentload,)
+
 				# если остаётся произведённая энергия
-				if currentpv.get_production(hour):
-					
+				if currentpv.get_production():
+
 					# обеспечиваем соседей энергией при необходимости
 					for nload in range(NOH):
 						if nload == i:
 							continue
 						if houses[nload][1].needer:
 							houses[nload][1].add_productor(currentpv)
-					
+
 					# если ещё осталась энегрия
-					if currentpv.get_production(hour):
-						
+					if currentpv.get_production():
+
 						# если наш аккумулятор полностью заряжен
 						if storage.isfull:
-								
+
 							# обеспечиваем энергией аккумуляторы соседей при необходимости
 							for nstorage in range(NOH):
 								if nstorage == i:
 									continue
 								if not houses[nstorage][2].isfull:	
 									houses[nstorage][2].add_productor(currentpv)
-						
+
 						# если наш аккумулятор заряжен частично
 						else:
 							# заряжаем аккумулятор производимой мощностью
-							pv_to_load(currentpv, storage, hour)
-							
+							pv_to_load(currentpv, storage, )
+
 							# если ещё осталась произведённая энергия
-							if currentpv.get_production(hour):
-								
+							if currentpv.get_production():
+
 								# обеспечиваем энергией аккумуляторы соседей при необходимости
 								for nstorage in range(NOH):
 									if nstorage == i:
 										continue
 									if not houses[nstorage][2].isfull:
 										houses[nstorage][2].add_productor(currentpv)
-								
+
 							# если произведённая энергия закончилась
 							else:
-								
+
 								# если у соседей есть произведённая энергия
-								if any([pv.get_production(hour) for pv in [p for p, l, s in houses]]):
-								
+								if any([pv.get_production() for pv in [p for p, l, s in houses]]):
+
 									# если наш аккумулятор заряжен частично
-									if not (storage.full):
-										
+									if not (storage.isfull):
+
 										# запрашиваем энергию соседей для нашей нагрузки
 										for p, l, s in houses:
-											if p.get_production(hour):
+											if p.get_production():
 												load.add_productor(p)
-												
+
 								# если у соседей нет энергии
 								else:
-									
+
 									# если наш аккумулятор заряжен
 									if storage.isfull:
-										
+
 										# запрашиваем передачу нашей энергии соседям
 										for nload in range(NOH):
 											if nload == i:
@@ -155,24 +172,24 @@ def main():
 
 					# если произведённая энергия закончилась
 					else:
-						
+
 						# если у соседей есть произведённая энергия
-						if any([pv.get_production(hour) for pv in [p for p, l, s in houses]]):
-									
+						if any([pv.get_production() for pv in [p for p, l, s in houses]]):
+
 							# если наш аккумулятор заряжен частично
-							if not (storage.full):
-										
+							if not (storage.isfull):
+
 								# запрашиваем энергию соседей для нашей нагрузки
 								for p, l, s in houses:
-									if p.get_production(hour):
+									if p.get_production():
 										load.add_productor(p)
-							
+
 						# если у соседей нет энергии
 						else:
-							
+
 							# если наш аккумулятор заряжен
 							if storage.isfull:
-									
+
 								# запрашиваем передачу нашей энергии соседям
 								for nload in range(NOH):
 									if nload == i:
@@ -182,78 +199,78 @@ def main():
 
 				# если произведённая энергия закончилась
 				else:
-					
+
 					# если у соседей есть произведённая энергия
-					if any([pv.get_production(hour) for pv in [p for p, l, s in houses]]):
-						
+					if any([pv.get_production() for pv in [p for p, l, s in houses]]):
+
 						# если наш аккумулятор заряжен частично
-						if not (storage.full):
-							
+						if not (storage.isfull):
+
 							# запрашиваем энергию соседей для нашего аккумулятора
 							for p, l, s in houses:
-								if p.get_production(hour):
+								if p.get_production():
 									storage.add_productor(p)
-					
+
 					# если у соседей нет энергии
 					else:
-						
+
 						# если наш аккумулятор заряжен
 						if storage.isfull:
-						
+
 							# запрашиваем передачу нашей энергии соседям
 							for nload in range(NOH):
 								if nload == i:
 									continue
 								if houses[nload][1].needer:
 									houses[nload][1].add_productor(currentpv)
-			
+
 			# если производство энергии меньше потребления
 			else:
-				
+
 				# обеспечиваем нашу нагрузку производимой энергией
 				pv_to_load(currentpv, currentload)
-				
+
 				# запрашиваем энергию соседей для нашей нагрузки
 				for p, l, s in houses:
-					if p.get_production(hour):
+					if p.get_production():
 						load.add_productor(p)
-				
+
 				# если нам ещё нужна энергия
-				if load.get_consumption(hour):
-			
+				if load.get_consumption():
+
 					# если есть запасённая энергия
 					if storage.isfull:
-						
+
 						# подаём нашу запасённую энергию на нашу нагрузку
-						pv_to_load(storage, load, hour)
-								
+						pv_to_load(storage, load, )
+
 						# если нам ещё нужна энергия
-						if load.get_consumption(hour):
-					
+						if load.get_consumption():
+
 							# запрашиваем запасённую энергию соседей для нашей нагрузки
 							for p, l, s in houses:
 								if s.isfull:
 									load.add_productor(s)
-									
+
 							# если нам ещё нужна энергия
-							if load.get_consumption(hour):
-								
+							if load.get_consumption():
+
 								# запрашиваем энергию с грида на нашу нагрузку
 								load.add_productor(grid)
-								
+
 						# если нам уже не нужна энергия
 						else:
-						
+
 							# если наш аккумулятор заряжен
 							if storage.isfull:
-									
+
 								# запрашиваем передачу нашей энергии соседям
 								for nload in range(NOH):
 									if nload == i:
 										continue
 									if houses[nload][1].needer:
 										houses[nload][1].add_productor(currentpv)
-					
+
 					# если наш аккумулятор полностью разряжен
 					else:
 
@@ -261,33 +278,33 @@ def main():
 						for p, l, s in houses:
 							if s.isfull:
 								load.add_productor(s)
-						
+
 						# если нам ещё нужна энергия
-						if load.get_consumption(hour):
-								
+						if load.get_consumption():
+
 							# запрашиваем энергию с грида на нашу нагрузку
 							load.add_productor(grid)
-						
+
 				# если нам энергии достаточно
 				else:
-							
+
 					# если у соседей есть произведённая энергия
-					if any([pv.get_production(hour) for pv in [p for p, l, s in houses]]):
-								
+					if any([pv.get_production() for pv in [p for p, l, s in houses]]):
+
 						# если наш аккумулятор заряжен частично
-						if not (storage.full):
-									
+						if not (storage.isfull):
+
 							# запрашиваем энергию соседей для нашего аккумулятора
 							for p, l, s in houses:
-								if p.get_production(hour):
+								if p.get_production():
 									storage.add_productor(p)
-							
+
 					# если у соседей нет энергии
 					else:
-						
+
 						# если наш аккумулятор заряжен
 						if storage.isfull:
-									
+
 							# запрашиваем передачу нашей энергии соседям
 							for nload in range(NOH):
 								if nload == i:
@@ -297,7 +314,8 @@ def main():
 	
 
 NOH = 3  # number of houses
-workhours = 1
+power = [20, 25, 30, 35]  # возможная мощность потребителя
+workhours = 20  # количество часов работы
 grid = None
 if __name__ == '__main__':
 	main()
