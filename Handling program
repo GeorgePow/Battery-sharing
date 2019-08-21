@@ -3,263 +3,262 @@ from math import log
 
 
 class Photovoltaic:
-	'''Класс показывает состояние солнечных панелей/источников энергии'''
-	func = normalvariate(0, 0.15)  # функция, задающая мощность выработки
+    '''Класс показывает состояние солнечных панелей/источников энергии'''
+    func = normalvariate(0, 0.15)  # функция, задающая мощность выработки
 
-	def __init__(self, power=100):
-		self.power = power  # стандартный множитель мощности
-		self.prod = round(self.set_production(), 6)
+    def __init__(self, power=100):
+        self.power = power  # стандартный множитель мощности
+        self.prod = round(self.set_production(), 6)
 
-	# функция возвращает доступную мощность	
-	def get_production(self):
-		return self.prod
+    # функция возвращает доступную мощность
+    def get_production(self):
+        return self.prod
 
-	# функция передачи доступной мощности	
-	def transfer_energy(self, load):
-		# передаём всю доступную энергию и получаем оставшуюся
-		self.prod = load.receive_energy(self.prod)
+    # функция передачи доступной мощности
+    def transfer_energy(self, load):
+        # передаём всю доступную энергию и получаем оставшуюся
+        self.prod = load.receive_energy(self.prod)
 
-	# функция объявления выработки энергии
-	def set_production(self):
-		return create_capacity(self, self.power, Photovoltaic.func)
+    # функция объявления выработки энергии
+    def set_production(self):
+        return create_capacity(self, self.power, Photovoltaic.func)
 
 
 class Load:
-	'''Класс показывает состояние потребителя'''
-	func = (-0.5 * log(random())) ** 1.5  # функция, задающая потребление нагрузкой
+    '''Класс показывает состояние потребителя'''
+    func = (-0.5 * log(random())) ** 1.5  # функция, задающая потребление нагрузкой
 
-	def __init__(self, load=30):
-		self.load = load  # стандартный множитель мощности
-		self.standartcons = 14.752  # стандартная мощность
-		self.cons = round(self.set_consumption(), 6)
-		self.needy = True
-		self.producers = []
+    def __init__(self, load=30):
+        self.load = load  # стандартный множитель мощности
+        self.standartcons = 14.752  # стандартная мощность
+        self.cons = round(self.set_consumption(), 6)
+        self.needy = True
+        self.producers = []
 
-	# функция объявления нагрузки на данный час
-	def set_consumption(self):
-		return create_capacity(self, self.load, Load.func, base=self.standartcons)
+    # функция объявления нагрузки на данный час
+    def set_consumption(self):
+        return create_capacity(self, self.load, Load.func, base=self.standartcons)
 
-	# функция возвращает требуемую мощность
-	def get_consumption(self):
-		return self.cons
+    # функция возвращает требуемую мощность
+    def get_consumption(self):
+        return self.cons
 
-	# функция получения требуемой мощности
-	def receive_energy(self, energy):
-		self.cons -= energy
-		energy, self.cons, self.needy = (-self.cons, 0, False) if self.cons <= 0 else (0, self.cons, True)
-		# self.cons = 0 if self.cons <= 0 else self.cons
-		return energy
+    # функция получения требуемой мощности
+    def receive_energy(self, energy):
+        self.cons -= energy
+        energy, self.cons, self.needy = (-self.cons, 0, False) if self.cons <= 0 else (0, self.cons, True)
+        # self.cons = 0 if self.cons <= 0 else self.cons
+        return energy
 
-	# функция добавления источника энергии	
-	def add_productor(self, *productor):
-		if self.needy:
-			self.producers.extend(productor)
-		else:
-			self.producers.clear()
+    # функция добавления источника энергии
+    def add_producer(self, *producer):
+        if self.needy:
+            self.producers.extend(producer)
+        else:
+            self.producers.clear()
 
 
 class Storage:
-	'''Класс показывает состояние аккумулятора'''
-	def __init__(self, roominess=100):
-		self.maxroominess = roominess
-		self.roominess = self.maxroominess
-		self.isfull = None
-		self.producers = []
+    '''Класс показывает состояние аккумулятора'''
 
-	def check_charge(self, status):
-		# status == True -- запрос о полном заряде
-		# status == False -- запрос о полном разряде
-		if status:
-			return True if self.roominess == self.maxroominess else False
-		return True if self.roominess == 0 else False
+    def __init__(self, roominess=100):
+        self.maxroominess = roominess
+        self.roominess = self.maxroominess
+        self.isfull = None
+        self.producers = []
 
-	# функция получения требуемой мощности	
-	def receive_energy(self, energy):
-		self.roominess += energy
-		energy, self.roominess = (self.roominess - self.maxroominess, self.maxroominess) if self.roominess > self.maxroominess else (0, self.roominess)
+    def check_charge(self, status):
+        # status == True -- запрос о полном заряде
+        # status == False -- запрос о полном разряде
+        if status:
+            return True if self.roominess == self.maxroominess else False
+        return True if self.roominess == 0 else False
 
-	# функция передачи доступной мощности
-	def transfer_energy(self, load):
-		# передаём всю доступную энергию и получаем оставшуюся
-		self.roominess = load.receive_energy(self.roominess)
+    # функция получения требуемой мощности
+    def receive_energy(self, energy):
+        self.roominess += energy
+        energy, self.roominess = (
+        self.roominess - self.maxroominess, self.maxroominess) if self.roominess > self.maxroominess else (
+        0, self.roominess)
 
-	# функция добавления источника энергии
-	def add_producer(self, *producer):
-		if not self.check_charge(True):
-			self.producers.extend(producer)
-		else:
-			self.producers.clear()
+    # функция передачи доступной мощности
+    def transfer_energy(self, load):
+        # передаём всю доступную энергию и получаем оставшуюся
+        self.roominess = load.receive_energy(self.roominess)
+
+    # функция добавления источника энергии
+    def add_producer(self, *producer):
+        if not self.check_charge(True):
+            self.producers.extend(producer)
+        else:
+            self.producers.clear()
 
 
 # функция передачи вырабатываемой мощности на нагрузку
 def pv_to_load(pv, load):
-	pv.transfer_energy(load)
+    pv.transfer_energy(load)
 
 
 # функция задания мощности
 def create_capacity(pv, power, func, base=0.0):
-	generation = [func for _ in range(7)]
-	for i in range(workhours):
-		generation += [func]
-		generation[i] = sum(generation[i:i + 8]) / 8
-		return (sum(generation[:-7]) + base) * power
+    generation = [func for _ in range(7)]
+    for i in range(workhours):
+        generation += [func]
+        generation[i] = sum(generation[i:i + 8]) / 8
+        return (sum(generation[:-7]) + base) * power
 
 
 # функция обмена энергией
 def energy_exchange(singleagent, multiagent, direction=True):
-	if direction:
-		for acc in multiagent
-			acc.add_producer(singleagent)
-	else:
-		singleagent.add_producer(*multiagent)
+    if direction:
+        for acc in multiagent:
+            acc.add_producer(singleagent)
+    else:
+        singleagent.add_producer(*multiagent)
 
 
 # главная функция
 def main():
-	# houses = dict((i, (Photovoltaic(choice(power)), Load(i), Storage(i))) for i in range(NOH))  # объявление хозяйств
-	houses = list([tuple(element() for i in range(NOH)) for element in (Photovoltaic, Load, Storage)])
+    # houses = dict((i, (Photovoltaic(choice(power)), Load(i), Storage(i))) for i in range(NOH))  # объявление хозяйств
+    houses = list([tuple(element() for i in range(NOH)) for element in (Photovoltaic, Load, Storage)])
 
-	for hour in range(1):  # работа в течении указанного времени
-		# for nh in range(NOH):  # задаём значения на данный час:
-		# 	houses[nh][0].set_production()  # производства энергии
-		# 	houses[nh][1].set_consumption()  # потребляемой нагрузки
+    for hour in range(1):  # работа в течении указанного времени
+        # for nh in range(NOH):  # задаём значения на данный час:
+        # 	houses[nh][0].set_production()  # производства энергии
+        # 	houses[nh][1].set_consumption()  # потребляемой нагрузки
 
-		# цикл распределения мощности
-		for i in range(NOH):
-			pv, load, storage = [el[i] for el in houses]  # компоненты рассматриваемого дома
-			# значения производимой энергии и потребления для рассматриваемого дома
-			pvprod, loadcons = pv.get_production(), load.get_consumption()
+        # цикл распределения мощности
+        for i in range(NOH):
+            pv, load, storage = [el[i] for el in houses]  # компоненты рассматриваемого дома
+            # значения производимой энергии и потребления для рассматриваемого дома
+            pvprod, loadcons = pv.get_production(), load.get_consumption()
 
-			# если производство превышает потребление
-			if pvprod >= loadcons:
+            # если производство превышает потребление
+            if pvprod >= loadcons:
 
-				# обеспечиваем нашу нагрузку производимой энергией
-				pv_to_load(pvprod, loadcons)
+                # обеспечиваем нашу нагрузку производимой энергией
+                pv_to_load(pvprod, loadcons)
 
-				# если остаётся произведённая энергия
-				if pvprod.get_production():
+                # если остаётся произведённая энергия
+                if pvprod.get_production():
 
-					# обеспечиваем соседей энергией при необходимости
-					energy_exchange(pvprod, houses[1])
+                    # обеспечиваем соседей энергией при необходимости
+                    energy_exchange(pvprod, houses[1])
 
-					# если ещё осталась энегрия
-					if pvprod.get_production():
+                    # если ещё осталась энегрия
+                    if pvprod.get_production():
 
-						# если наш аккумулятор полностью заряжен
-						if storage.check_charge(True):
+                        # если наш аккумулятор полностью заряжен
+                        if storage.check_charge(True):
 
-							# обеспечиваем энергией аккумуляторы соседей при необходимости
-							energy_exchange(pvprod, houses[2])
+                            # обеспечиваем энергией аккумуляторы соседей при необходимости
+                            energy_exchange(pvprod, houses[2])
 
-						# если наш аккумулятор заряжен частично
-						else:
+                        # если наш аккумулятор заряжен частично
+                        else:
 
-							# заряжаем аккумулятор производимой мощностью
-							pv_to_load(pvprod, storage)
+                            # заряжаем аккумулятор производимой мощностью
+                            pv_to_load(pvprod, storage)
 
-							# если ещё осталась произведённая энергия
-							if pvprod.get_production():
+                            # если ещё осталась произведённая энергия
+                            if pvprod.get_production():
 
-								# обеспечиваем энергией аккумуляторы соседей при необходимости
-								for nstorage in range(NOH):
-									if nstorage == i:
-										continue
-									if not houses[nstorage][2].isfull:
-										houses[nstorage][2].add_producer(pvprod)
+                                # обеспечиваем энергией аккумуляторы соседей при необходимости
+                                energy_exchange(pvprod, houses[2])
 
-							# если произведённая энергия закончилась
-							else:
+                            # если произведённая энергия закончилась
+                            else:
 
-								# если у соседей есть произведённая энергия
-								neighbourpv = list(filter(lambda pv: pv.get_production(), houses[0]))
-								if neighbourpv:
+                                # если у соседей есть произведённая энергия
+                                neighbourpv = list(filter(lambda pv: pv.get_production(), houses[0]))
+                                if neighbourpv:
 
-									# если наш аккумулятор заряжен частично
-									if not (storage.check_charge(True)):
+                                    # если наш аккумулятор заряжен частично
+                                    if not (storage.check_charge(True)):
 
-										# запрашиваем энергию соседей для нашей нагрузки
-										load.add_productor(neighbourpv)
+                                        # запрашиваем энергию соседей для нашего аккумулятора
+                                        storage.add_producer(*neighbourpv)
 
-								# если у соседей нет энергии
-								else:
+                                # если у соседей нет энергии
+                                else:
 
-									# если наш аккумулятор заряжен
-									if storage.check_charge(True):
+                                    # если наш аккумулятор не разряжен полностью
+                                    if not storage.check_charge(False):
 
 										# запрашиваем передачу нашей энергии соседям
-										for neighbourload in list(filter(lambda load: load.needy, houses[2])):
-											neighbourload.add_productor(pvprod)
+										energy_exchange(storage, houses[1])
 
 					# если произведённая энергия закончилась
-					else:
+                    else:
 
-						# если у соседей есть произведённая энергия
-						if any([pv.get_production() for pv in [p for p, l, s in houses]]):
+                        # если у соседей есть произведённая энергия
+						neighbourpv = list(filter(lambda pv: pv.get_production(), houses[0]))
+                        if neighbourpv:  # any([pv.get_production() for pv in houses[0]]):
 
-							# если наш аккумулятор заряжен частично
-							if not (storage.isfull):
-								
-								# запрашиваем энергию соседей для нашей нагрузки
-								for p, l, s in houses:
-									if p.get_production():
-										load.add_productor(p)
+                            # если наш аккумулятор заряжен частично
+                            if not (storage.check_charge(True)):
 
-						# если у соседей нет энергии
-						else:
+                                # запрашиваем энергию соседей для нашего аккумулятора
+								storage.add_producer(*neighbourpv)
 
-							# если наш аккумулятор заряжен
-							if storage.isfull:
+                        # если у соседей нет энергии
+                        else:
 
-								# запрашиваем передачу нашей энергии соседям
-								for nload in range(NOH):
-									if nload == i:
-										continue
-									if houses[nload][1].needy:
-										houses[nload][1].add_productor(pvprod)
+                            # если наш аккумулятор заряжен
+                            if not (storage.check_charge(False)):
 
-				# если произведённая энергия закончилась
-				else:
+                                # запрашиваем передачу нашей энергии соседям
+								energy_exchange(storage, houses[1])
 
-					# если у соседей есть произведённая энергия
-					if any([pv.get_production() for pv in [p for p, l, s in houses]]):
+                # если произведённая энергия закончилась
+                else:
 
-						# если наш аккумулятор заряжен частично
-						if not (storage.isfull):
+                    # если у соседей есть произведённая энергия
+						neighbourpv = list(filter(lambda pv: pv.get_production(), houses[0]))
+                        if neighbourpv:
 
-							# запрашиваем энергию соседей для нашего аккумулятора
-							for p, l, s in houses:
-								if p.get_production():
-									storage.add_producer(p)
+                        # если наш аккумулятор заряжен частично
+                        if not (storage.check_charge(True)):
 
-					# если у соседей нет энергии
-					else:
+                            # запрашиваем энергию соседей для нашего аккумулятора
+						    storage.add_producer(neighbourpv)
 
-						# если наш аккумулятор заряжен
-						if storage.isfull:
+                    # если у соседей нет энергии
+                    else:
 
-							# запрашиваем передачу нашей энергии соседям
-							for nload in range(NOH):
-								if nload == i:
-									continue
-								if houses[nload][1].needy:
-									houses[nload][1].add_productor(pvprod)
+                        # если наш аккумулятор заряжен
+                        if not (storage.check_charge(False)):
 
-			# если производство энергии меньше потребления
-			else:
+                            # запрашиваем передачу нашей запасённой энергии соседям
+                            energy_exchange(storage, houses[1])
 
-				# обеспечиваем нашу нагрузку производимой энергией
-				pv_to_load(pvprod, loadcons)
+            # если производство энергии меньше потребления
+            else:
 
-				# запрашиваем энергию соседей для нашей нагрузки
-				for p, l, s in houses:
-					if p.get_production():
-						load.add_productor(p)
+                # обеспечиваем нашу нагрузку производимой энергией
+                pv_to_load(pvprod, loadcons)
 
-				# если нам ещё нужна энергия
-				if load.get_consumption():
+                # запрашиваем энергию соседей для нашей нагрузки
+				load.add_producer(*list(filter(lambda pv: pv.get_production(), houses[0])))
 
-					# если есть запасённая энергия
-					if storage.isfull:
+                # если нам ещё нужна энергия
+                if load.get_consumption():
+
+                    # если наш аккумулятор полностью разряжен
+                    if storage.check_charge(False):
+
+                        # запрашиваем запасённую энергию соседей для нашей нагрузки
+                        for p, l, s in houses:
+                            if s.isfull:
+                                load.add_producer(s)
+
+                        # если нам ещё нужна энергия
+                        if load.get_consumption():
+                            # запрашиваем энергию с грида на нашу нагрузку
+                            load.add_producer(grid)
+
+                    # если есть запасённая энергия
+                    else:
 
 						# подаём нашу запасённую энергию на нашу нагрузку
 						pv_to_load(storage, load, )
@@ -270,13 +269,12 @@ def main():
 							# запрашиваем запасённую энергию соседей для нашей нагрузки
 							for p, l, s in houses:
 								if s.isfull:
-									load.add_productor(s)
+									load.add_producer(s)
 
 							# если нам ещё нужна энергия
 							if load.get_consumption():
-
 								# запрашиваем энергию с грида на нашу нагрузку
-								load.add_productor(grid)
+								load.add_producer(grid)
 
 						# если нам уже не нужна энергия
 						else:
@@ -289,53 +287,39 @@ def main():
 									if nload == i:
 										continue
 									if houses[nload][1].needy:
-										houses[nload][1].add_productor(pvprod)
-
-					# если наш аккумулятор полностью разряжен
-					else:
-
-						# запрашиваем запасённую энергию соседей для нашей нагрузки
-						for p, l, s in houses:
-							if s.isfull:
-								load.add_productor(s)
-
-						# если нам ещё нужна энергия
-						if load.get_consumption():
-
-							# запрашиваем энергию с грида на нашу нагрузку
-							load.add_productor(grid)
+										houses[nload][1].add_producer(pvprod)
 
 				# если нам энергии достаточно
-				else:
+                else:
 
-					# если у соседей есть произведённая энергия
-					if any([pv.get_production() for pv in [p for p, l, s in houses]]):
+                    # если у соседей есть произведённая энергия
+                    if any([pv.get_production() for pv in [p for p, l, s in houses]]):
 
-						# если наш аккумулятор заряжен частично
-						if not (storage.isfull):
+                        # если наш аккумулятор заряжен частично
+                        if not (storage.isfull):
 
-							# запрашиваем энергию соседей для нашего аккумулятора
-							for p, l, s in houses:
-								if p.get_production():
-									storage.add_producer(p)
+                            # запрашиваем энергию соседей для нашего аккумулятора
+                            for p, l, s in houses:
+                                if p.get_production():
+                                    storage.add_producer(p)
 
-					# если у соседей нет энергии
-					else:
+                    # если у соседей нет энергии
+                    else:
 
-						# если наш аккумулятор заряжен
-						if storage.isfull:
+                        # если наш аккумулятор заряжен
+                        if storage.isfull:
 
-							# запрашиваем передачу нашей энергии соседям
-							for nload in range(NOH):
-								if nload == i:
-									continue
-								if houses[nload][1].needy:
-									houses[nload][1].add_productor(pvprod)
-	
+                            # запрашиваем передачу нашей энергии соседям
+                            for nload in range(NOH):
+                                if nload == i:
+                                    continue
+                                if houses[nload][1].needy:
+                                    houses[nload][1].add_producer(pvprod)
+
 
 NOH = 3  # number of houses
 power = [20, 25, 30, 35]  # возможная мощность потребителя
 workhours = 20  # количество часов работы
 grid = None
 if __name__ == '__main__':
-	main()
+    main()
