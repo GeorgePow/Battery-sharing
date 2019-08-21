@@ -51,8 +51,11 @@ class Load:
 		return energy
 
 	# функция добавления источника энергии	
-	def add_productor(self, productor):
-		self.producers.append(productor)
+	def add_productor(self, *productor):
+		if self.needy:
+			self.producers.extend(productor)
+		else:
+			self.producers.clear()
 
 
 class Storage:
@@ -73,7 +76,7 @@ class Storage:
 	# функция получения требуемой мощности	
 	def receive_energy(self, energy):
 		self.roominess += energy
-		energy = self.roominess - self.maxroominess if self.roominess > self.maxroominess else 0
+		energy, self.roominess = (self.roominess - self.maxroominess, self.maxroominess) if self.roominess > self.maxroominess else (0, self.roominess)
 
 	# функция передачи доступной мощности
 	def transfer_energy(self, load):
@@ -81,8 +84,11 @@ class Storage:
 		self.roominess = load.receive_energy(self.roominess)
 
 	# функция добавления источника энергии
-	def add_producer(self, producer):
-		self.producers.append(producer)
+	def add_producer(self, *producer):
+		if not self.check_charge(True):
+			self.producers.extend(producer)
+		else:
+			self.producers.clear()
 
 
 # функция передачи вырабатываемой мощности на нагрузку
@@ -90,12 +96,22 @@ def pv_to_load(pv, load):
 	pv.transfer_energy(load)
 
 
+# функция задания мощности
 def create_capacity(pv, power, func, base=0.0):
 	generation = [func for _ in range(7)]
 	for i in range(workhours):
 		generation += [func]
 		generation[i] = sum(generation[i:i + 8]) / 8
 		return (sum(generation[:-7]) + base) * power
+
+
+# функция обмена энергией
+def energy_exchange(singleagent, multiagent, direction=True):
+	if direction:
+		for acc in multiagent
+			acc.add_producer(singleagent)
+	else:
+		singleagent.add_producer(*multiagent)
 
 
 # главная функция
@@ -124,11 +140,7 @@ def main():
 				if pvprod.get_production():
 
 					# обеспечиваем соседей энергией при необходимости
-					for nload in range(NOH):
-						if nload == i:
-							continue
-						if houses[1][nload].needy:
-							houses[1][nload].add_productor(pvprod)
+					energy_exchange(pvprod, houses[1])
 
 					# если ещё осталась энегрия
 					if pvprod.get_production():
@@ -137,11 +149,7 @@ def main():
 						if storage.check_charge(True):
 
 							# обеспечиваем энергией аккумуляторы соседей при необходимости
-							for nstorage in range(NOH):
-								if nstorage == i:
-									continue
-								if not houses[2][nstorage].check_charge(True):	
-									houses[2][nstorage].add_producer(pvprod)
+							energy_exchange(pvprod, houses[2])
 
 						# если наш аккумулятор заряжен частично
 						else:
