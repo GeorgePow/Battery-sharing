@@ -19,7 +19,7 @@ class Photovoltaic:
     # функция передачи доступной мощности
     def transfer_energy(self, load):
         # передаём всю доступную энергию и получаем оставшуюся
-        self.prod = load.receive_energy(self.prod)
+        self.prod = load.receive_energy('Photovoltaic', self.prod)
 
     # функция объявления выработки энергии
     def set_production(self):
@@ -37,6 +37,7 @@ class Load:
         self.cons = round(self.set_consumption(), 6)
         self.needy = True
         self.producers = []
+        self.received = dict()
 
     # функция объявления нагрузки на данный час
     def set_consumption(self):
@@ -47,11 +48,14 @@ class Load:
         return self.cons
 
     # функция получения требуемой мощности
-    def receive_energy(self, energy):
-        self.cons -= energy
-        energy, self.cons, self.needy = (-self.cons, 0, False) if self.cons <= 0 else (0, self.cons, True)
-        # self.cons = 0 if self.cons <= 0 else self.cons
-        return energy
+    def receive_energy(self, donorname, energy):
+    	if energy is 'all':
+    		self.received[str(len(self.received)) + ") " + donorname], self.cons = self.cons, 0
+    		return
+    	self.cons -= energy
+    	energy, self.cons, self.needy, ts = (-self.cons, 0, False, energy + self.cons) if self.cons <= 0 else (0, self.cons, True, energy)
+    	self.received[str(len(self.received)) + ") " + donorname] = ts
+    	return energy
 
     # функция добавления источника энергии
     def add_producer(self, *producer):
@@ -59,6 +63,17 @@ class Load:
             self.producers.extend(producer)
         else:
             self.producers.clear()
+    
+    # функция питания от запасных источников энергии
+    def use_producer(self):
+    	if self.producers == []:
+    		return
+    	while self.producers and self.needy:
+    		self.producers.pop(0).transfer_energy(self)
+    
+    # функция вывода источников энергии на экран
+    def declare_donors(self):
+    	return [name + ": " + str(round(energy, 6)) for name, energy in self.received.items()]
 
 
 class Storage:
@@ -68,8 +83,9 @@ class Storage:
     def __init__(self, rand=False):
         self.maxroominess = choice(Storage.possiblepower) if rand else 40
         self.roominess = self.maxroominess
-        self.isfull = None
+        # self.isfull = None
         self.producers = []
+        self.received = dict()
         
     def get_charge(self):
     	return self.roominess
@@ -82,16 +98,20 @@ class Storage:
         return True if self.roominess == 0 else False
 
     # функция получения требуемой мощности
-    def receive_energy(self, energy):
+    def receive_energy(self, donorname, energy):
         self.roominess += energy
-        energy, self.roominess = (
-        self.roominess - self.maxroominess, self.maxroominess) if self.roominess > self.maxroominess else (
-        0, self.roominess)
+        energy, self.roominess, ts = (
+        self.roominess - self.maxroominess,
+        self.maxroominess,
+        energy - (self.roominess - self.maxroominess)) if self.roominess > self.maxroominess \
+        else (0, self.roominess, energy)
+        self.received[str(len(self.received)) + ") " + donorname] = ts
+        return energy
 
     # функция передачи доступной мощности
     def transfer_energy(self, load):
         # передаём всю доступную энергию и получаем оставшуюся
-        self.roominess = load.receive_energy(self.roominess)
+        self.roominess = load.receive_energy('Storage', self.roominess)
 
     # функция добавления источника энергии
     def add_producer(self, *producer):
@@ -99,6 +119,29 @@ class Storage:
             self.producers.extend(producer)
         else:
             self.producers.clear()
+    
+    # функция питания от запасных источников энергии
+    def use_producer(self):
+    	if self.producers == []:
+    		return
+    	for prod in self.producers:
+    		if self.check_charge(True):
+    			break
+    		prod.transfer_energy(self)
+    
+    # функция вывода источников энергии на экран
+    def declare_donors(self):
+    	return [name + ": " + str(round(energy, 6)) for name, energy in self.received.items()] + ["Total: " + str(sum(self.received.values()))]
+    	
+    	
+class Grid:
+	def __init__(self, power):
+		self.power = power
+		
+	# функция передачи доступной мощности
+	def transfer_energy(self, load):
+		# передаём всю доступную энергию
+		load.receive_energy('Grid', self.power)
 
 
 # функция передачи вырабатываемой мощности на нагрузку
@@ -124,10 +167,17 @@ def energy_exchange(singleagent, multiagent, direction=True):
         singleagent.add_producer(*multiagent)
 
 
+# функция использования чужой энергии
+def activate_additional_producers(*consumers):
+	for load in consumers:
+		load.use_producer()
+
+
 # главная функция
 def main():
     # houses = dict((i, (Photovoltaic(choice(power)), Load(i), Storage(i))) for i in range(NOH))  # объявление хозяйств
     houses = list([tuple(element(True) for i in range(NOH)) for element in (Photovoltaic, Load, Storage)])
+    print(houses[2][0].__class__.__name__)
 
     for hour in range(1):  # работа в течении указанного времени
         # for nh in range(NOH):  # задаём значения на данный час:
@@ -316,16 +366,19 @@ def main():
 
                             # запрашиваем передачу нашей энергии соседям
                             energy_exchange(storage, houses[1])
+                            
+        activate_additional_producers(*houses[1], *houses[2])
 
         for pv, load, storage in list(zip(*houses)):
         	print("--------\nPV: " + str(round(pv.get_production(), 6)),
         	         "Load: " + str(round(load.get_consumption(), 6)),
+        	         "\t" + "\n\t".join(load.declare_donors()),
         	         "Storage: " + str(round(storage.get_charge(), 6)), sep='\n')
 
 
-NOH = 3  # number of houses
+NOH = 5  # number of houses
 power = [20, 25, 30, 35]  # возможная мощность потребителя
-workhours = 20  # количество часов работы
-grid = None
+workhours = 24  # количество часов работы
+grid = Grid('all')
 if __name__ == '__main__':
     main()
