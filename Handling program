@@ -1,5 +1,8 @@
 from random import normalvariate, choice, random
 from math import log
+import RPi.GPIO as GPIO
+import pymysql.cursors
+import time
 
 
 class Photovoltaic:
@@ -7,7 +10,8 @@ class Photovoltaic:
     func = normalvariate(0, 0.15)  # функция, задающая мощность выработки
     possiblepower = [70, 80, 90]
 
-    def __init__(self, rand=False):
+    def __init__(self, num, rand=False):
+        self.num = num
         self.power = choice(Photovoltaic.possiblepower) if rand else 100  # стандартный множитель мощности
         self.standartprod = 8.079995
         self.prod = round(self.set_production(), 6)
@@ -31,7 +35,8 @@ class Load:
     func = (-0.5 * log(random())) ** 1.5  # функция, задающая потребление нагрузкой
     possiblepower = [30, 40, 50]
 
-    def __init__(self, rand=False):
+    def __init__(self, num, rand=False):
+        self.num = num
         self.load = choice(Load.possiblepower) if rand else 35 # стандартный множитель мощности
         self.standartcons = 14.752  # стандартная мощность
         self.cons = round(self.set_consumption(), 6)
@@ -80,22 +85,37 @@ class Storage:
     '''Класс показывает состояние аккумулятора'''
     possiblepower = [50, 55, 60]
 
-    def __init__(self, rand=False):
+    def __init__(self, num, rand=False):
+        self.num = num
         self.maxroominess = choice(Storage.possiblepower) if rand else 40
         self.roominess = self.maxroominess
         # self.isfull = None
         self.producers = []
         self.received = dict()
-        
+     
+    # функция возвращает значение заряда  
     def get_charge(self):
     	return self.roominess
 
+    # запрос о статусе заряда
     def check_charge(self, status):
         # status == True -- запрос о полном заряде
         # status == False -- запрос о полном разряде
         if status:
             return True if self.roominess == self.maxroominess else False
         return True if self.roominess == 0 else False
+
+    # функция получения значения из БД        
+    def fetch_value(self):
+        sql = "SELECT 'battery_charge' FROM 'users' WHERE 'user_id'=%s"
+        cursor.execute(sql, (self.num,))
+        result = cursor.fetchone()
+        
+    # функция отправления данных в БД
+    def insert_value(self):
+        sql = "INSERT INTO 'users' ('battery_charege') VALUES (%s) WHERE 'user_id'=%s"
+        cursor.execute(sql, (round(self.roominess / self.maxroominess), self.num))
+        connection.commit()
 
     # функция получения требуемой мощности
     def receive_energy(self, donorname, energy):
@@ -175,9 +195,33 @@ def activate_additional_producers(*consumers):
 
 # главная функция
 def main():
-    # houses = dict((i, (Photovoltaic(choice(power)), Load(i), Storage(i))) for i in range(NOH))  # объявление хозяйств
-    houses = list([tuple(element(True) for i in range(NOH)) for element in (Photovoltaic, Load, Storage)])
-    print(houses[2][0].__class__.__name__)
+	global pins
+    NOH = 5  # number of houses
+    power = [20, 25, 30, 35]  # возможная мощность потребителя
+    workhours = 24  # количество часов работы
+    grid = Grid('all')
+    
+    pins = set_pins(True)
+    start_exchange()
+	
+
+def set_pins():
+    elements = dict()
+    val = ' '
+    while val:
+        key, *value = input().split()
+        elements[key] = value
+    return elements
+
+
+def swap_pins(pin_name, pin_num, status):
+	mode = HIGH if status else LOW
+	GPIO.setmode(pins[pins_name][pins_num], status)
+
+
+# функция обмена энергией
+def start_exchange():
+    houses = list([tuple(element(i, True) for i in range(NOH)) for element in (Photovoltaic, Load, Storage)]) # объявление хозяйств
 
     for hour in range(1):  # работа в течении указанного времени
         # for nh in range(NOH):  # задаём значения на данный час:
@@ -376,9 +420,6 @@ def main():
         	         "Storage: " + str(round(storage.get_charge(), 6)), sep='\n')
 
 
-NOH = 5  # number of houses
-power = [20, 25, 30, 35]  # возможная мощность потребителя
-workhours = 24  # количество часов работы
-grid = Grid('all')
 if __name__ == '__main__':
     main()
+
