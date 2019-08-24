@@ -1,7 +1,7 @@
 from random import normalvariate, choice, random
 from math import log
 import serial
-# import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 import pymysql.cursors
 from time import sleep
 
@@ -228,12 +228,7 @@ def activate_additional_producers(*consumers):
 
 # главная функция
 def main():
-    global pins, NOH, workhours, grid
-
-    NOH = 5  # number of houses
-    power = [20, 25, 30, 35]  # возможная мощность потребителя
-    workhours = 24  # количество часов работы
-    grid = Grid('all')
+    global pins
 
     pins = set_pins()
     start_exchange()
@@ -252,6 +247,8 @@ def set_pins(mode=False):
 
 # функция включения/выключения пина
 def swap_pins(pin_name, pin_num, status):
+    # msg = ''.join(map(str, [data1, data2])).rjust(3, '0')
+    # ser.write(msg.encoding())
     mode = HIGH if status else LOW
     GPIO.setmode(pins[pin_name][pin_num], mode)
 
@@ -280,15 +277,23 @@ def start_exchange():
 
             # если производство превышает потребление
             if pvprod >= loadcons:
+                # удаляем ненужные переменные
+                del pvprod
+                del loadcons
 
                 # обеспечиваем нашу нагрузку производимой энергией
                 pv_to_load(pv, load)
+                swap_pins(pv.num, 0, True)
+                sleep(0.1)
 
                 # если остаётся произведённая энергия
                 if pv.get_production():
 
+                    swap_pins(pv.num, 0, False)
                     # обеспечиваем соседей энергией при необходимости
                     energy_exchange(pv, houses[1])
+                    swap_pins(pv.num, 1, True)
+                    sleep(0.1)
 
                     # если ещё осталась энегрия
                     if pv.get_production():
@@ -298,18 +303,24 @@ def start_exchange():
 
                             # обеспечиваем энергией аккумуляторы соседей при необходимости
                             energy_exchange(pv, houses[2])
+                            swap_pins(pv.num, 1, True)
+                            sleep(0.1)
 
                         # если наш аккумулятор заряжен частично
                         else:
 
                             # заряжаем аккумулятор производимой мощностью
                             pv_to_load(pv, storage)
+                            swap_pins(pv.num, 1, False)
+                            sleep(0.1)
 
                             # если ещё осталась произведённая энергия
                             if pv.get_production():
 
                                 # обеспечиваем энергией аккумуляторы соседей при необходимости
                                 energy_exchange(pv, houses[2])
+                                swap_pins(pv.num, 1, True)
+                                sleep(0.1)
 
                             # если произведённая энергия закончилась
                             else:
@@ -334,9 +345,14 @@ def start_exchange():
 
                 # обеспечиваем нашу нагрузку производимой энергией
                 pv_to_load(pv, load)
+                swap_pins(pv.num, 0, True)
+                sleep(0.1)
 
+                swap_pins(pv.num, 0, False)
                 # запрашиваем энергию соседей для нашей нагрузки
                 load.add_producer(*list(filter(lambda pv: pv.get_production(), houses[0])))
+                swap_pins(pv.num, 1, True)
+                sleep(0.1)
 
                 # если нам ещё нужна энергия
                 if load.get_consumption():
@@ -355,14 +371,19 @@ def start_exchange():
                     # если есть запасённая энергия
                     else:
 
+                        swap_pins(pv.num, 1, False)
                         # подаём нашу запасённую энергию на нашу нагрузку
                         pv_to_load(storage, load)
+                        sleep(0.1)
 
                         # если нам ещё нужна энергия
                         if load.get_consumption():
 
                             # запрашиваем запасённую энергию соседей для нашей нагрузки
                             energy_exchange(load, houses[2], direction=False)
+                            swap_pins(pv.num, 1, True)
+                            sleep(0.1)
+
                             # если нам ещё нужна энергия
                             if load.get_consumption():
                                 # запрашиваем энергию с грида на нашу нагрузку
@@ -373,8 +394,11 @@ def start_exchange():
 
                             # если наш аккумулятор не полностью разряжен
                             if not (storage.check_charge(False)):
+
                                 # запрашиваем передачу нашей энергии соседям
                                 energy_exchange(storage, houses[1])
+                                swap_pins(pv.num, 1, True)
+                                sleep(0.1)
 
                 # если нам энергии достаточно
                 else:
@@ -412,5 +436,9 @@ def last_branch(currentstorage, allpv, allload):
             energy_exchange(currentstorage, allload)
 
 
+NOH = 5  # number of houses
+power = [20, 25, 30, 35]  # возможная мощность потребителя
+workhours = 24  # количество часов работы
+grid = Grid('all')
 if __name__ == '__main__':
     main()
